@@ -1854,4 +1854,24 @@ function getDirectionChangeOfTurn( vehicle )
   local isHeadlandCornerTurn = math.abs( directionChangeDeg ) < laneTurnAngleThreshold
   return directionChangeDeg, isHeadlandCornerTurn
 end
+
+--[[
+The vehicle at vehiclePos moving into the direction of WP waypoint. 
+The direction it should be when reaching the waypoint is wpAngle. 
+We need to determine a T1 target where the vehicle can drive to and actually reach WP in wpAngle direction.
+see https://ggbm.at/RN3cawGc
+--]]
+
+function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
+	-- target waypoint we want to reach
+	local wpNode = createNode( "wpNode", tx, tz, math.rad( tDirection ))
+  -- which side of the target node are we?
+	local vx, vy, vz = localToWorld( vehicle.directionNode, 0, 0, 0 )
+	local dx, _, _ = worldToLocal( wpNode, vx, vy, vz )
+	local leftOrRight = dx < 0 and -1 or 1
+	-- center of turn circle
+	local c1 = {}
+	c1.x, c1.y, c1.z = localToWorld( wpNode, leftOrRight * vehicle.cp.turnDiameter / 2, 0, 0 )
+end
+
 -- vim: set noexpandtab:
