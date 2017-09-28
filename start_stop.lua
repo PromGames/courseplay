@@ -459,6 +459,14 @@ function courseplay:start(self)
 			courseplay:setWaypointIndex(self, 3);
 			courseplay:setIsLoaded(self, true);
 		else
+			local distToFirst = courseplay:distanceToPoint( self, self.Waypoints[ 1 ].cx, 0, self.Waypoints[ 1 ].cz )
+			if distToFirst > self.cp.turnDiameter then
+				local ax, ay, az, angle = courseplay:getAlignWpToTargetWaypoint( self, self.Waypoints[ 1 ].cx, self.Waypoints[ 1 ].cz, math.rad( self.Waypoints[ 1 ].angle ))
+				local alignWp = { cx = ax, cz = az, angle = math.deg( angle ), removeWhenReached = true } 
+				table.insert( self.Waypoints, 1, alignWp )
+				courseplay:debug(string.format("%s: Start/Stop: first waypoint is %.1f m, insert an alignment wp at (%1.f, %1.f), dir = %1.f", 
+												 nameNum(self), distToFirst, ax, az, math.deg( angle )), 12);
+			end
 			courseplay:setWaypointIndex(self, 1);
 		end
 	end;

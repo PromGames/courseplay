@@ -1834,9 +1834,9 @@ function courseplay:turnWithOffset(self)
 	end;
 end;
 
-function courseplay:createNode( name, x, z, yRotation )
+function courseplay:createNode( name, x, z, yRotation, rootNode )
 	local node = createTransformGroup( name )
-	link( g_currentMission.terrainRootNode, node )
+	link( rootNode or g_currentMission.terrainRootNode, node )
 	local y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 0, z);
 	setTranslation( node, x, y, z );
 	setRotation( node, 0, yRotation, 0);
@@ -1863,15 +1863,40 @@ see https://ggbm.at/RN3cawGc
 --]]
 
 function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
+	-- make the radius a bit bigger to make sure we can make the turn
+	local turnRadius = 1.2 * vehicle.cp.turnDiameter / 2
 	-- target waypoint we want to reach
-	local wpNode = createNode( "wpNode", tx, tz, math.rad( tDirection ))
+	local wpNode = courseplay:createNode( "wpNode", tx, tz, tDirection )
   -- which side of the target node are we?
-	local vx, vy, vz = localToWorld( vehicle.directionNode, 0, 0, 0 )
+	local vx, vy, vz = getWorldTranslation(vehicle.cp.DirectionNode or vehicle.rootNode);
 	local dx, _, _ = worldToLocal( wpNode, vx, vy, vz )
 	local leftOrRight = dx < 0 and -1 or 1
 	-- center of turn circle
-	local c1 = {}
-	c1.x, c1.y, c1.z = localToWorld( wpNode, leftOrRight * vehicle.cp.turnDiameter / 2, 0, 0 )
-end
+	local c1x, c1y, c1z = localToWorld( wpNode, leftOrRight * turnRadius, 0, 0 )
+	local vehicleToC1Distance = courseplay:distance( vx, vz, c1x, c1z )
+	local vehicleToC1Direction = math.atan2(c1x - vx, c1z - vz )
+	local angleBetweenTangentAndC1 = math.pi / 2 - math.asin( turnRadius / vehicleToC1Distance )
+	local c1Node = courseplay:createNode( "c1Node", c1x, c1z, vehicleToC1Direction )
+  local t1Node = courseplay:createNode( "t1Node", 0, 0, - leftOrRight * ( math.pi - angleBetweenTangentAndC1 ), c1Node )
 
+	courseplay:debug(string.format("%s:(Align) vehicleToC1Distance = %.1f, vehicleToC1Direction = %.1f angelBetween = %.1f, wpANgle = %.1f, turnRadius = %.1f, %.1f", 
+	                                nameNum(vehicle), vehicleToC1Distance, math.deg( vehicleToC1Direction ), math.deg( angleBetweenTangentAndC1 ), math.deg( tDirection ), turnRadius
+																	   , leftOrRight * math.deg( math.pi - angleBetweenTangentAndC1 )), 12);
+
+  local ax, ay, az = localToWorld( t1Node, 0, 0, turnRadius )
+	local vehicleToT1Direction = math.atan2( ax - vx, az - vz )
+	local sx, sy, sz = localToWorld( c1Node, 0, 0, turnRadius )
+	courseplay:destroyNode( t1Node )
+	courseplay:destroyNode( c1Node )
+	courseplay:destroyNode( wpNode )
+	vy = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, c1x, 300, c1z);
+	vehicle.drawDebugLine = function() 
+		drawDebugLine( c1x, vy + 4, c1z, 1, 0, 0, ax, vy + 4, az, 0, 0, 1 ) 
+		drawDebugLine( c1x, vy + 4, c1z, 1, 1, 0, sx, vy + 4, sz, 1, 1, 0 ) 
+		drawDebugLine( c1x, vy + 4, c1z, 1, 0, 0, tx, vy + 4, tz, 0, 0, 1 ) 
+		drawDebugLine( ax, vy + 4, az, 0, 1, 1, tx, vy + 4, tz, 0, 1, 1 ) 
+	  end
+	return ax, ay, az, vehicleToT1Direction
+end
+-- do not delete this line
 -- vim: set noexpandtab:

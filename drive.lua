@@ -143,10 +143,11 @@ function courseplay:drive(self, dt)
 			drawDebugPoint(cx, cty+3, cz, 0, 1 , 1, 1);
 		end;
 	end;
-
+  
 	if courseplay.debugChannels[12] and self.cp.isTurning == nil then
 		local posY = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, cx, 300, cz);
 		drawDebugLine(ctx, cty + 3, ctz, 0, 1, 0, cx, posY + 3, cz, 0, 0, 1)
+    if self.drawDebugLine then self.drawDebugLine() end
 	end;
 	if CpManager.isDeveloper and self.cp.hasSpecializationArticulatedAxis and courseplay.debugChannels[12] then
 		local posY = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, cx, 300, cz);
@@ -1000,8 +1001,8 @@ function courseplay:drive(self, dt)
 	-- if distance grows i must be circling
 	if self.cp.distanceToTarget > self.cp.shortestDistToWp and self.cp.waypointIndex > 3 and self.cp.distanceToTarget < 15 and self.Waypoints[self.cp.waypointIndex].rev ~= true then
 		distToChange = self.cp.distanceToTarget + 1
-    courseplay:debug( string.format( "circling? wp=%d distToChange %.1f, shortestDistToWp %1.f, distanceToTarget %.1f", 
-                                     self.cp.waypointIndex, self.cp.shortestDistToWp, distToChange, self.cp.distanceToTarget ), 12 )
+    courseplay:debug( string.format( "%s: circling? wp=%d distToChange %.1f, shortestDistToWp %1.f, distanceToTarget %.1f", 
+                                     nameNum( self ), self.cp.waypointIndex, self.cp.shortestDistToWp, distToChange, self.cp.distanceToTarget ), 12 )
 	end
 
 	if self.cp.distanceToTarget > distToChange or WpUnload or WpLoadEnd or isFinishingWork then
@@ -1059,7 +1060,16 @@ function courseplay:drive(self, dt)
 			end
 			if self.cp.mode == 7 and self.cp.modeState == 5 then
 			else
-				courseplay:setWaypointIndex(self, self.cp.waypointIndex + 1);
+        -- SWITCH TO THE NEXT WAYPOINT
+				if self.Waypoints and 
+					 self.Waypoints[ self.cp.waypointIndex ] and 
+					 self.Waypoints[ self.cp.waypointIndex ].removeWhenReached then
+					-- current waypoint is temporary, not part of the course, should be removed here
+					table.remove( self.Waypoints, 1 )
+					-- no need to increase the index
+			  else
+					courseplay:setWaypointIndex(self, self.cp.waypointIndex + 1);
+				end
         local rev = ""
         if beforeReverse then 
           rev = "beforeReverse"
@@ -1067,7 +1077,7 @@ function courseplay:drive(self, dt)
         if afterReverse then
           rev = rev .. " afterReverse"
         end
-        courseplay:debug( string.format( "Switch to next wp: %d, distToChange %.1f, %s", self.cp.waypointIndex, distToChange, rev ), 12 )
+        courseplay:debug( string.format( "%s: Switch to next wp: %d, distToChange %.1f, %s", nameNum( self ), self.cp.waypointIndex, distToChange, rev ), 12 )
 			end
 		else -- last waypoint: reset some variables
 			if (self.cp.mode == 4 or self.cp.mode == 6) and not self.cp.hasUnloadingRefillingCourse then
@@ -1841,3 +1851,5 @@ function courseplay:setCollisionDirection(node, col, colDirX, colDirZ)
 		setDirection(col, colDirX, colDirY, colDirZ, 0, 1, 0);
 	end;
 end;
+-- do not delete this line
+-- vim: set noexpandtab:
