@@ -105,6 +105,7 @@ function courseplay:handle_mode2(vehicle, dt)
           -- generate course to target around fruit when needed but don't end course in turnDiameter distance
           -- before to avoid circling when transitioning to the next mode
 					if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter ) then
+				    courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 1 ], vehicle.nextTargets, #vehicle.nextTargets + 1 )
 						courseplay:unregisterFromCombine(vehicle, vehicle.cp.activeCombine)
 						courseplay:setCurrentTargetFromList(vehicle, 1);
 					end	
@@ -123,6 +124,7 @@ function courseplay:handle_mode2(vehicle, dt)
       -- generate course to target around fruit when needed but don't end course in turnDiameter distance
       -- before to avoid circling when transitioning to the next mode
 			if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter ) then
+				courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 1 ], vehicle.nextTargets, #vehicle.nextTargets + 1 )
 				courseplay:setCurrentTargetFromList(vehicle, 1);
 				courseplay:setModeState(vehicle, STATE_FOLLOW_TARGET_WPS);
 				courseplay:setMode2NextState(vehicle, STATE_ALL_TRAILERS_FULL );
@@ -1685,6 +1687,8 @@ function courseplay:calculateAstarPathToCoords( vehicle, combine, tx, tz, endBef
     return true                                 
   end
 end
+
+
 
 function courseplay:onWhichFieldAmI(vehicle)
 	local fieldNum = 0;

@@ -461,7 +461,7 @@ function courseplay:start(self)
 		else
 			local distToFirst = courseplay:distanceToPoint( self, self.Waypoints[ 1 ].cx, 0, self.Waypoints[ 1 ].cz )
 			if distToFirst > self.cp.turnDiameter then
-				courseplay:addAlignmentWaypoint( self, self.Waypoints[ 1 ])
+				courseplay:addAlignmentWaypoint( self, self.Waypoints[ 1 ], self.Waypoints, 1 )
 			end
 			courseplay:setWaypointIndex(self, 1);
 		end
@@ -698,12 +698,7 @@ function courseplay:stop(self)
 		self.vehicleCharacter:delete();
 	end
 
-	if self.Waypoints and 
-		 self.Waypoints[ 1 ] and 
-		 self.Waypoints[ 1 ].removeWhenReached then
-		-- has an alignment waypoint inserted, not part of the course, remove it now
-		table.remove( self.Waypoints, 1 )	
-	end
+	courseplay:removeAlignmentWaypoint( self, 1 )
 
 	if self.isEntered or self.isControlled then
 		if self.vehicleCharacter ~= nil then

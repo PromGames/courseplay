@@ -1903,12 +1903,24 @@ function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
 	return ax, ay, az, vehicleToT1Direction
 end
 
-function courseplay:addAlignmentWaypoint( vehicle, targetWaypoint )
+function courseplay:addAlignmentWaypoint( vehicle, targetWaypoint, wpTable, wpPosition )
 	local ax, ay, az, angle = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
 	local alignWp = { cx = ax, cz = az, angle = math.deg( angle ), removeWhenReached = true } 
-	table.insert( vehicle.Waypoints, 1, alignWp )
+	table.insert( wpTable, wpPosition, alignWp )
 	courseplay:debug(string.format("%s: Inserting an alignment wp at (%1.f, %1.f), dir = %1.f", 
 									 nameNum(vehicle), ax, az, math.deg( angle )), 12);
+end
+
+function courseplay:removeAlignmentWaypoint( vehicle, waypointIndex )
+	if vehicle.Waypoints and 
+		 vehicle.Waypoints[ waypointIndex ] and 
+		 vehicle.Waypoints[ waypointIndex ].removeWhenReached then
+		-- current waypoint is temporary, not part of the course, should be removed here
+		table.remove( vehicle.Waypoints, 1 )
+		vehicle.drawDebugLine = nil
+		return true
+	end
+	return false
 end
 
 -- do not delete this line

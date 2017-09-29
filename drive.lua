@@ -1061,12 +1061,8 @@ function courseplay:drive(self, dt)
 			if self.cp.mode == 7 and self.cp.modeState == 5 then
 			else
         -- SWITCH TO THE NEXT WAYPOINT
-				if self.Waypoints and 
-					 self.Waypoints[ self.cp.waypointIndex ] and 
-					 self.Waypoints[ self.cp.waypointIndex ].removeWhenReached then
-					-- current waypoint is temporary, not part of the course, should be removed here
-					table.remove( self.Waypoints, 1 )
-					-- no need to increase the index
+				if courseplay:removeAlignmentWaypoint( self, self.cp.waypointIndex ) then
+					-- no need to increase the index or set the next wp
 			  else
 					courseplay:setWaypointIndex(self, self.cp.waypointIndex + 1);
 				end
