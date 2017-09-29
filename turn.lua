@@ -1880,8 +1880,8 @@ function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
   local t1Node = courseplay:createNode( "t1Node", 0, 0, - leftOrRight * ( math.pi - angleBetweenTangentAndC1 ), c1Node )
 
 	courseplay:debug(string.format("%s:(Align) vehicleToC1Distance = %.1f, vehicleToC1Direction = %.1f angelBetween = %.1f, wpANgle = %.1f, turnRadius = %.1f, %.1f", 
-	                                nameNum(vehicle), vehicleToC1Distance, math.deg( vehicleToC1Direction ), math.deg( angleBetweenTangentAndC1 ), math.deg( tDirection ), turnRadius
-																	   , leftOrRight * math.deg( math.pi - angleBetweenTangentAndC1 )), 12);
+	                                nameNum(vehicle), vehicleToC1Distance, math.deg( vehicleToC1Direction ), math.deg( angleBetweenTangentAndC1 ), math.deg( tDirection ), 
+																	turnRadius, leftOrRight * math.deg( math.pi - angleBetweenTangentAndC1 )), 12);
 
   local ax, ay, az = localToWorld( t1Node, 0, 0, turnRadius )
 	local vehicleToT1Direction = math.atan2( ax - vx, az - vz )
@@ -1891,12 +1891,25 @@ function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
 	courseplay:destroyNode( wpNode )
 	vy = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, c1x, 300, c1z);
 	vehicle.drawDebugLine = function() 
+		-- red to blue from circle center to alignment wp
 		drawDebugLine( c1x, vy + 4, c1z, 1, 0, 0, ax, vy + 4, az, 0, 0, 1 ) 
+		-- yellow showing the direction from vehicle to center
 		drawDebugLine( c1x, vy + 4, c1z, 1, 1, 0, sx, vy + 4, sz, 1, 1, 0 ) 
+		-- red to blue from circle center to target wp
 		drawDebugLine( c1x, vy + 4, c1z, 1, 0, 0, tx, vy + 4, tz, 0, 0, 1 ) 
+		-- cyan from align wp to target wp
 		drawDebugLine( ax, vy + 4, az, 0, 1, 1, tx, vy + 4, tz, 0, 1, 1 ) 
 	  end
 	return ax, ay, az, vehicleToT1Direction
 end
+
+function courseplay:addAlignmentWaypoint( vehicle, targetWaypoint )
+	local ax, ay, az, angle = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
+	local alignWp = { cx = ax, cz = az, angle = math.deg( angle ), removeWhenReached = true } 
+	table.insert( vehicle.Waypoints, 1, alignWp )
+	courseplay:debug(string.format("%s: Inserting an alignment wp at (%1.f, %1.f), dir = %1.f", 
+									 nameNum(vehicle), ax, az, math.deg( angle )), 12);
+end
+
 -- do not delete this line
 -- vim: set noexpandtab:
