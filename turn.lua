@@ -1876,10 +1876,14 @@ function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
 	local vehicleToC1Distance = courseplay:distance( vx, vz, c1x, c1z )
 	local vehicleToC1Direction = math.atan2(c1x - vx, c1z - vz )
 	local angleBetweenTangentAndC1 = math.pi / 2 - math.asin( turnRadius / vehicleToC1Distance )
+	-- check for NaN, may happen when we are closer han turnRadius
+	if angleBetweenTangentAndC1 ~= angleBetweenTangentAndC1 then
+		return nil, nil, nil, nil
+	end
 	local c1Node = courseplay:createNode( "c1Node", c1x, c1z, vehicleToC1Direction )
   local t1Node = courseplay:createNode( "t1Node", 0, 0, - leftOrRight * ( math.pi - angleBetweenTangentAndC1 ), c1Node )
 
-	courseplay:debug(string.format("%s:(Align) vehicleToC1Distance = %.1f, vehicleToC1Direction = %.1f angelBetween = %.1f, wpANgle = %.1f, turnRadius = %.1f, %.1f", 
+	courseplay:debug(string.format("%s:(Align) vehicleToC1Distance = %.1f, vehicleToC1Direction = %.1f angleBetween = %.1f, wpAngle = %.1f, turnRadius = %.1f, %.1f", 
 	                                nameNum(vehicle), vehicleToC1Distance, math.deg( vehicleToC1Direction ), math.deg( angleBetweenTangentAndC1 ), math.deg( tDirection ), 
 																	turnRadius, leftOrRight * math.deg( math.pi - angleBetweenTangentAndC1 )), 12);
 
@@ -1905,10 +1909,16 @@ end
 
 function courseplay:addAlignmentWaypoint( vehicle, targetWaypoint, wpTable, wpPosition )
 	local ax, ay, az, angle = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
-	local alignWp = { cx = ax, cz = az, angle = math.deg( angle ), removeWhenReached = true } 
+	if not ax then
+		courseplay:debug(string.format("%s:(Align) can't find an alignment waypoint, may be too close to target wp?", nameNum(vehicle)), 12 )
+		return
+	end
+	-- add coordinates to cx/cz _and_ x/z for Waypoints in general and for nextTargets in mode2. 
+	-- why, why, why can't we call them x and z everywhere?
+	local alignWp = { cx = ax, cz = az, x = ax, z = az, angle = math.deg( angle ), removeWhenReached = true } 
 	table.insert( wpTable, wpPosition, alignWp )
-	courseplay:debug(string.format("%s: Inserting an alignment wp at (%1.f, %1.f), dir = %1.f", 
-									 nameNum(vehicle), ax, az, math.deg( angle )), 12);
+	courseplay:debug(string.format("%s:(Align) Inserting an alignment wp at index %d: (%1.f, %1.f), dir = %1.f", 
+									 nameNum(vehicle), wpPosition, ax, az, math.deg( angle )), 12);
 end
 
 function courseplay:removeAlignmentWaypoint( vehicle, waypointIndex )
@@ -1916,8 +1926,9 @@ function courseplay:removeAlignmentWaypoint( vehicle, waypointIndex )
 		 vehicle.Waypoints[ waypointIndex ] and 
 		 vehicle.Waypoints[ waypointIndex ].removeWhenReached then
 		-- current waypoint is temporary, not part of the course, should be removed here
-		table.remove( vehicle.Waypoints, 1 )
+		table.remove( vehicle.Waypoints, waypointIndex )
 		vehicle.drawDebugLine = nil
+		courseplay:debug(string.format("%s:(Align) removing alignment waypoint at index %d", nameNum(vehicle), waypointIndex ), 12 )
 		return true
 	end
 	return false

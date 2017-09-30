@@ -82,7 +82,7 @@ function courseplay:handle_mode2(vehicle, dt)
 					vehicle.cp.nextTargets ={}
 				end
 				local targetIsInFront = false
-				local cx,cz = vehicle.Waypoints[2].cx, vehicle.Waypoints[2].cz
+				local cx,cz = vehicle.Waypoints[1].cx, vehicle.Waypoints[1].cz
 				local cy = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, cx, 0, cz)
 				local x,_,z = worldToLocal(vehicle.cp.DirectionNode or vehicle.rootNode, cx, cy, cz)
 				local overTakeDistance = 15
@@ -104,10 +104,10 @@ function courseplay:handle_mode2(vehicle, dt)
 				if vehicle.cp.realisticDriving then
           -- generate course to target around fruit when needed but don't end course in turnDiameter distance
           -- before to avoid circling when transitioning to the next mode
-					if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter ) then
-				    courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 1 ], vehicle.nextTargets, #vehicle.nextTargets + 1 )
+					if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter * 2 ) then
+				    --courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 1 ], vehicle.cp.nextTargets, #vehicle.cp.nextTargets + 1 )
 						courseplay:unregisterFromCombine(vehicle, vehicle.cp.activeCombine)
-						courseplay:setCurrentTargetFromList(vehicle, 1);
+				    courseplay:setCurrentTargetFromList(vehicle, 1); 
 					end	
 				end
 				courseplay:setModeState(vehicle, STATE_FOLLOW_TARGET_WPS);
@@ -118,21 +118,25 @@ function courseplay:handle_mode2(vehicle, dt)
 	-- Have enough payload, can now drive back to the silo
 	if vehicle.cp.modeState == STATE_WAIT_AT_START and (vehicle.cp.totalFillLevelPercent >= vehicle.cp.driveOnAtFillLevel or vehicle.cp.isLoaded) then
 		vehicle.cp.currentTrailerToFill = nil
+	  courseplay:debug(string.format("%s (%s): wait for work but trailers full.", nameNum(vehicle), tostring(vehicle.id)), 4);
 		if vehicle.cp.realisticDriving then
 			vehicle.cp.curTarget.x, vehicle.cp.curTarget.y, vehicle.cp.curTarget.z = localToWorld(vehicle.cp.DirectionNode, 0, 0, 1)
 			local cx,cz = vehicle.Waypoints[2].cx, vehicle.Waypoints[2].cz
       -- generate course to target around fruit when needed but don't end course in turnDiameter distance
       -- before to avoid circling when transitioning to the next mode
-			if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter ) then
-				courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 1 ], vehicle.nextTargets, #vehicle.nextTargets + 1 )
+			if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter * 2 ) then
+				--courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 1 ], vehicle.cp.nextTargets, #vehicle.cp.nextTargets + 1 )
 				courseplay:setCurrentTargetFromList(vehicle, 1);
 				courseplay:setModeState(vehicle, STATE_FOLLOW_TARGET_WPS);
 				courseplay:setMode2NextState(vehicle, STATE_ALL_TRAILERS_FULL );
 			else
+				courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 2 ], vehicle.Waypoints, 2 )
 				courseplay:setWaypointIndex(vehicle, 2);
 				courseplay:setIsLoaded(vehicle, true);
 			end	
 		else
+	    courseplay:debug(string.format("%s (%s): wait for work but trailers full.", nameNum(vehicle), tostring(vehicle.id)), 4);
+			courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 2 ], vehicle.Waypoints, 2 )
 			courseplay:setWaypointIndex(vehicle, 2);
 			courseplay:setIsLoaded(vehicle, true);
 		end
@@ -1114,10 +1118,12 @@ function courseplay:unload_combine(vehicle, dt)
 					courseplay:setInfoText(vehicle, "COURSEPLAY_WAITING_FOR_COMBINE_TURNED");
 
 				elseif vehicle.cp.mode2nextState == STATE_ALL_TRAILERS_FULL then -- tipper turning from combine
+	        courseplay:debug(string.format("%s (%s): trailer(s) full, last field waypoint reached, heading for the first course waypoint.", nameNum(vehicle), tostring(vehicle.id)), 4);
 					courseplay:releaseCombineStop(vehicle,vehicle.cp.activeCombine)
 					courseplay:unregisterFromCombine(vehicle, vehicle.cp.activeCombine)
 					courseplay:setIsLoaded(vehicle, true);
 					courseplay:setModeState(vehicle, STATE_DEFAULT);
+				  courseplay:addAlignmentWaypoint( vehicle, vehicle.Waypoints[ 2 ], vehicle.Waypoints, 2 )
 					courseplay:setWaypointIndex(vehicle, 2);
 
 				elseif vehicle.cp.mode2nextState == STATE_WAIT_AT_START then

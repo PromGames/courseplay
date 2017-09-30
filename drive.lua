@@ -478,7 +478,7 @@ function courseplay:drive(self, dt)
 			self.cp.inTraffic = false
 			courseplay:handle_mode2(self, dt);
 			return;
-		elseif (self.cp.mode == 2 or self.cp.mode == 3) and self.cp.waypointIndex < 3 then
+		elseif (self.cp.mode == 2 or self.cp.mode == 3) and self.cp.waypointIndex < 2 then
 			isBypassing = true
 			lx, lz = courseplay:isTheWayToTargetFree(self,lx, lz)
 		elseif self.cp.mode == 6 and self.cp.hasBaleLoader and (self.cp.waypointIndex == self.cp.stopWork + 1 or (self.cp.abortWork ~= nil and self.cp.waypointIndex == self.cp.abortWork)) then
