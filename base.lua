@@ -221,6 +221,9 @@ function courseplay:load(savegame)
 	self.cp.turnTargets = {};
 	self.cp.curTurnIndex = 1;
 
+	-- alignment course
+	self.cp.alignment = {}
+
 	-- speed limits
 	self.cp.speeds = {
 		useRecordingSpeed = true;

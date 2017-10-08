@@ -1870,6 +1870,7 @@ function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
   -- which side of the target node are we?
 	local vx, vy, vz = getWorldTranslation(vehicle.cp.DirectionNode or vehicle.rootNode);
 	local dx, _, _ = worldToLocal( wpNode, vx, vy, vz )
+	-- right -1, left +1
 	local leftOrRight = dx < 0 and -1 or 1
 	-- center of turn circle
 	local c1x, c1y, c1z = localToWorld( wpNode, leftOrRight * turnRadius, 0, 0 )
@@ -1878,47 +1879,94 @@ function courseplay:getAlignWpToTargetWaypoint( vehicle, tx, tz, tDirection )
 	local angleBetweenTangentAndC1 = math.pi / 2 - math.asin( turnRadius / vehicleToC1Distance )
 	-- check for NaN, may happen when we are closer han turnRadius
 	if angleBetweenTangentAndC1 ~= angleBetweenTangentAndC1 then
-		return nil, nil, nil, nil
+		return nil
 	end
 	local c1Node = courseplay:createNode( "c1Node", c1x, c1z, vehicleToC1Direction )
   local t1Node = courseplay:createNode( "t1Node", 0, 0, - leftOrRight * ( math.pi - angleBetweenTangentAndC1 ), c1Node )
 
 	courseplay:debug(string.format("%s:(Align) vehicleToC1Distance = %.1f, vehicleToC1Direction = %.1f angleBetween = %.1f, wpAngle = %.1f, turnRadius = %.1f, %.1f", 
-	                                nameNum(vehicle), vehicleToC1Distance, math.deg( vehicleToC1Direction ), math.deg( angleBetweenTangentAndC1 ), math.deg( tDirection ), 
-																	turnRadius, leftOrRight * math.deg( math.pi - angleBetweenTangentAndC1 )), 12);
+																	nameNum(vehicle), vehicleToC1Distance, math.deg( vehicleToC1Direction ), math.deg( angleBetweenTangentAndC1 ), math.deg( tDirection ), 
+																	turnRadius, - leftOrRight * math.deg( math.pi - angleBetweenTangentAndC1 )), 12);
 
-  local ax, ay, az = localToWorld( t1Node, 0, 0, turnRadius )
-	local vehicleToT1Direction = math.atan2( ax - vx, az - vz )
-	local sx, sy, sz = localToWorld( c1Node, 0, 0, turnRadius )
+	local c1 = {}
+	c1.x, _, c1.z = localToWorld( c1Node, 0, 0, 0 )
+	local t1 = {}
+	t1.x, _, t1.z = localToWorld( t1Node, 0, 0, turnRadius )
+	local wp = { x = tx, z = tz } 
+
+  courseplay:generateTurnCircle( vehicle, c1, t1, wp, turnRadius, leftOrRight, false, false )
+	result = vehicle.cp.turnTargets
+	vehicle.cp.turnTargets = {}
+
 	courseplay:destroyNode( t1Node )
 	courseplay:destroyNode( c1Node )
 	courseplay:destroyNode( wpNode )
-	vy = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, c1x, 300, c1z);
-	vehicle.drawDebugLine = function() 
-		-- red to blue from circle center to alignment wp
-		drawDebugLine( c1x, vy + 4, c1z, 1, 0, 0, ax, vy + 4, az, 0, 0, 1 ) 
-		-- yellow showing the direction from vehicle to center
-		drawDebugLine( c1x, vy + 4, c1z, 1, 1, 0, sx, vy + 4, sz, 1, 1, 0 ) 
-		-- red to blue from circle center to target wp
-		drawDebugLine( c1x, vy + 4, c1z, 1, 0, 0, tx, vy + 4, tz, 0, 0, 1 ) 
-		-- cyan from align wp to target wp
-		drawDebugLine( ax, vy + 4, az, 0, 1, 1, tx, vy + 4, tz, 0, 1, 1 ) 
-	  end
-	return ax, ay, az, vehicleToT1Direction
+	return result 
+end
+
+function courseplay:startAlignmentCourse( vehicle, targetWaypoint )
+	local points = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
+	if not points then
+		courseplay:debug(string.format("%s:(Align) can't find an alignment course, may be too close to target wp?", nameNum(vehicle)), 12 )
+		return
+	end
+	-- save current course
+	vehicle.cp.alignment.savedWaypoints = vehicle.Waypoints
+  vehicle.cp.alignment.savedWaypointIndex = vehicle.cp.waypointIndex	
+  vehicle.cp.alignment.savedpreviousWaypointIndex = vehicle.cp.previousWaypointIndex	
+	-- for my life I won't understand why aren't we just using #vehicle.Waypoints everywhere
+	-- if we were, there'd be a need to save and restore it and maintain it, oh boy, but I don't 
+	-- have a week to refactor it everywhere 
+	vehicle.cp.alignment.savedNumWaypoints = vehicle.cp.numWaypoints
+	vehicle.Waypoints = {}
+	for i, point in ipairs( points ) do
+		-- add coordinates to cx/cz _and_ x/z for Waypoints in general and for nextTargets in mode2. 
+		-- why, why, why can't we call them x and z everywhere?
+		local alignWp = { cx = point.posX, cz = point.posZ, x = point.posX, z = point.posZ } 
+		table.insert( vehicle.Waypoints, alignWp )
+		courseplay:debug(string.format("%s:(Align) Adding an alignment wp: (%1.f, %1.f)", nameNum(vehicle), point.posX, point.posZ), 12)
+	end
+	vehicle.cp.numWaypoints = #vehicle.Waypoints
+  courseplay:setWaypointIndex(vehicle, 1);
+end
+
+function courseplay:onAlignmentCourse( vehicle )
+	print(vehicle.cp.alignment.savedWaypoints)
+	return vehicle.cp.alignment.savedWaypoints ~= nil
+end
+
+function courseplay:endAlignmentCourse( vehicle )
+	if courseplay:onAlignmentCourse( vehicle ) then
+		courseplay:debug(string.format("%s:(Align) Ending alignment course.", nameNum(vehicle)), 12 )
+		vehicle.Waypoints = vehicle.cp.alignment.savedWaypoints
+		vehicle.cp.numWaypoints = vehicle.cp.alignment.savedNumWaypoints
+		vehicle.cp.waypointIndex = vehicle.cp.alignment.savedWaypointIndex	
+		vehicle.cp.previousWaypointIndex = vehicle.cp.alignment.savedpreviousWaypointIndex	
+		vehicle.cp.alignment.savedWaypoints = nil
+	else
+		courseplay:debug(string.format("%s:(Align) Ending alignment course but not on alignement course.", nameNum(vehicle)), 12 )
+	end
 end
 
 function courseplay:addAlignmentWaypoint( vehicle, targetWaypoint, wpTable, wpPosition )
-	local ax, ay, az, angle = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
-	if not ax then
+	local points = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
+	if not points then
 		courseplay:debug(string.format("%s:(Align) can't find an alignment waypoint, may be too close to target wp?", nameNum(vehicle)), 12 )
 		return
 	end
-	-- add coordinates to cx/cz _and_ x/z for Waypoints in general and for nextTargets in mode2. 
-	-- why, why, why can't we call them x and z everywhere?
-	local alignWp = { cx = ax, cz = az, x = ax, z = az, angle = math.deg( angle ), removeWhenReached = true } 
-	table.insert( wpTable, wpPosition, alignWp )
-	courseplay:debug(string.format("%s:(Align) Inserting an alignment wp at index %d: (%1.f, %1.f), dir = %1.f", 
-									 nameNum(vehicle), wpPosition, ax, az, math.deg( angle )), 12);
+	for i, point in ipairs( points ) do 
+		-- add coordinates to cx/cz _and_ x/z for Waypoints in general and for nextTargets in mode2. 
+		-- why, why, why can't we call them x and z everywhere?
+		local alignWp = { cx = point.x, cz = point.z, x = point.x, z = point.z, angle = math.deg( point.angle ), removeWhenReached = true } 
+		table.insert( wpTable, wpPosition + i - 1, alignWp )
+		courseplay:debug(string.format("%s:(Align) Inserting an alignment wp at index %d: (%1.f, %1.f), dir = %1.f", 
+										 nameNum(vehicle), wpPosition + i - 1, point.x, point.z, math.deg( point.angle )), 12);
+	end
+end
+
+-- remove all alignment waypoints starting at waypointIndex
+function courseplay:removeAlignmentWaypoints( vehicle, waypointIndex )
+	while courseplay:removeAlignmentWaypoint( vehicle, waypointIndex ) do end
 end
 
 function courseplay:removeAlignmentWaypoint( vehicle, waypointIndex )

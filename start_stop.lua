@@ -459,11 +459,11 @@ function courseplay:start(self)
 			courseplay:setWaypointIndex(self, 3);
 			courseplay:setIsLoaded(self, true);
 		else
+			courseplay:setWaypointIndex(self, 1);
 			local distToFirst = courseplay:distanceToPoint( self, self.Waypoints[ 1 ].cx, 0, self.Waypoints[ 1 ].cz )
 			if distToFirst > self.cp.turnDiameter then
-				courseplay:addAlignmentWaypoint( self, self.Waypoints[ 1 ], self.Waypoints, 1 )
+				courseplay:startAlignmentCourse( self, self.Waypoints[ 1 ])
 			end
-			courseplay:setWaypointIndex(self, 1);
 		end
 	end;
 
@@ -698,7 +698,7 @@ function courseplay:stop(self)
 		self.vehicleCharacter:delete();
 	end
 
-	courseplay:removeAlignmentWaypoint( self, 1 )
+	courseplay:endAlignmentCourse( self )
 
 	if self.isEntered or self.isControlled then
 		if self.vehicleCharacter ~= nil then

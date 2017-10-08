@@ -821,6 +821,8 @@ function courseplay:drive(self, dt)
 	or	(not isAtEnd and (self.Waypoints[self.cp.waypointIndex].rev or self.Waypoints[self.cp.waypointIndex + 1].rev or self.Waypoints[self.cp.waypointIndex + 2].rev))
 	or	(workSpeed ~= nil and workSpeed == 0.5) -- baler in mode 6 , slow down
 	or isCrawlingToWait		
+	-- slow down for the alignment turn
+	or ( courseplay:onAlignmentCourse( self ) and self.cp.distanceToTarget < 10 )
 	then
 		refSpeed = math.min(self.cp.speeds.turn,refSpeed);              -- we are on the field, go field speed
 		speedDebugLine = ("drive("..tostring(debug.getinfo(1).currentline-1).."): refSpeed = "..tostring(refSpeed))
@@ -1061,11 +1063,7 @@ function courseplay:drive(self, dt)
 			if self.cp.mode == 7 and self.cp.modeState == 5 then
 			else
         -- SWITCH TO THE NEXT WAYPOINT
-				if courseplay:removeAlignmentWaypoint( self, self.cp.waypointIndex ) then
-					-- no need to increase the index or set the next wp
-			  else
-					courseplay:setWaypointIndex(self, self.cp.waypointIndex + 1);
-				end
+				courseplay:setWaypointIndex(self, self.cp.waypointIndex + 1);
         local rev = ""
         if beforeReverse then 
           rev = "beforeReverse"
@@ -1076,18 +1074,24 @@ function courseplay:drive(self, dt)
         courseplay:debug( string.format( "%s: Switch to next wp: %d, distToChange %.1f, %s", nameNum( self ), self.cp.waypointIndex, distToChange, rev ), 12 )
 			end
 		else -- last waypoint: reset some variables
-			if (self.cp.mode == 4 or self.cp.mode == 6) and not self.cp.hasUnloadingRefillingCourse then
+			if courseplay:onAlignmentCourse( self ) then
+				-- we are at the last wp of a temporary alignment course,
+				-- restore original course and continue on that
+				courseplay:endAlignmentCourse( self )
 			else
-				courseplay:setWaypointIndex(self, 1);
+				if (self.cp.mode == 4 or self.cp.mode == 6) and not self.cp.hasUnloadingRefillingCourse then
+				else
+					courseplay:setWaypointIndex(self, 1);
+				end
+				self.cp.isUnloaded = false
+				courseplay:setStopAtEnd(self, false);
+				courseplay:setIsLoaded(self, false);
+				courseplay:setIsRecording(self, false);
+				if self.cp.mode == 1 then
+					courseplay:changeRunCounter(self, false)
+				end;
+				self:setCpVar('canDrive',true,courseplay.isClient)
 			end
-			self.cp.isUnloaded = false
-			courseplay:setStopAtEnd(self, false);
-			courseplay:setIsLoaded(self, false);
-			courseplay:setIsRecording(self, false);
-			if self.cp.mode == 1 then
-				courseplay:changeRunCounter(self, false)
-			end;
-			self:setCpVar('canDrive',true,courseplay.isClient)
 		end
 	end
 end
