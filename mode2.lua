@@ -121,21 +121,23 @@ function courseplay:handle_mode2(vehicle, dt)
 		if vehicle.cp.realisticDriving then
 			vehicle.cp.curTarget.x, vehicle.cp.curTarget.y, vehicle.cp.curTarget.z = localToWorld(vehicle.cp.DirectionNode, 0, 0, 1)
 			local cx,cz = vehicle.Waypoints[2].cx, vehicle.Waypoints[2].cz
-      -- generate course to target around fruit when needed but don't end course in turnDiameter distance
+      -- generate course to target around fruit when needed but make sure we end the course far enough
       -- before to avoid circling when transitioning to the next mode
 			if courseplay:calculateAstarPathToCoords(vehicle,nil,cx,cz, vehicle.cp.turnDiameter * 2 ) then
 				courseplay:setCurrentTargetFromList(vehicle, 1);
 				courseplay:setModeState(vehicle, STATE_FOLLOW_TARGET_WPS);
 				courseplay:setMode2NextState(vehicle, STATE_ALL_TRAILERS_FULL );
 			else
-				courseplay:startAlignmentCourse( vehicle, vehicle.Waypoints[ 2 ])
+				-- start combi course at 2nd wp
 				courseplay:setWaypointIndex(vehicle, 2);
+				courseplay:startAlignmentCourse( vehicle, vehicle.Waypoints[ 1 ])
+				courseplay:setWaypointIndex(vehicle, 1);
 				courseplay:setIsLoaded(vehicle, true);
 			end	
 		else
-	    courseplay:debug(string.format("%s (%s): wait for work but trailers full.", nameNum(vehicle), tostring(vehicle.id)), 4);
-			courseplay:startAlignmentCourse( vehicle, vehicle.Waypoints[ 2 ])
 			courseplay:setWaypointIndex(vehicle, 2);
+			courseplay:startAlignmentCourse( vehicle, vehicle.Waypoints[ 1 ])
+			courseplay:setWaypointIndex(vehicle, 1);
 			courseplay:setIsLoaded(vehicle, true);
 		end
 
@@ -1121,8 +1123,9 @@ function courseplay:unload_combine(vehicle, dt)
 					courseplay:unregisterFromCombine(vehicle, vehicle.cp.activeCombine)
 					courseplay:setIsLoaded(vehicle, true);
 					courseplay:setModeState(vehicle, STATE_DEFAULT);
-					courseplay:startAlignmentCourse( vehicle, vehicle.Waypoints[ 2 ])
 					courseplay:setWaypointIndex(vehicle, 2);
+					courseplay:startAlignmentCourse( vehicle, vehicle.Waypoints[ 1 ])
+					courseplay:setWaypointIndex(vehicle, 1);
 
 				elseif vehicle.cp.mode2nextState == STATE_WAIT_AT_START then
 					-- refSpeed = vehicle.cp.speeds.turn
