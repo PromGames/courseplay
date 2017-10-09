@@ -1948,39 +1948,5 @@ function courseplay:endAlignmentCourse( vehicle )
 	end
 end
 
-function courseplay:addAlignmentWaypoint( vehicle, targetWaypoint, wpTable, wpPosition )
-	local points = courseplay:getAlignWpToTargetWaypoint( vehicle, targetWaypoint.cx, targetWaypoint.cz, math.rad( targetWaypoint.angle ))
-	if not points then
-		courseplay:debug(string.format("%s:(Align) can't find an alignment waypoint, may be too close to target wp?", nameNum(vehicle)), 12 )
-		return
-	end
-	for i, point in ipairs( points ) do 
-		-- add coordinates to cx/cz _and_ x/z for Waypoints in general and for nextTargets in mode2. 
-		-- why, why, why can't we call them x and z everywhere?
-		local alignWp = { cx = point.x, cz = point.z, x = point.x, z = point.z, angle = math.deg( point.angle ), removeWhenReached = true } 
-		table.insert( wpTable, wpPosition + i - 1, alignWp )
-		courseplay:debug(string.format("%s:(Align) Inserting an alignment wp at index %d: (%1.f, %1.f), dir = %1.f", 
-										 nameNum(vehicle), wpPosition + i - 1, point.x, point.z, math.deg( point.angle )), 12);
-	end
-end
-
--- remove all alignment waypoints starting at waypointIndex
-function courseplay:removeAlignmentWaypoints( vehicle, waypointIndex )
-	while courseplay:removeAlignmentWaypoint( vehicle, waypointIndex ) do end
-end
-
-function courseplay:removeAlignmentWaypoint( vehicle, waypointIndex )
-	if vehicle.Waypoints and 
-		 vehicle.Waypoints[ waypointIndex ] and 
-		 vehicle.Waypoints[ waypointIndex ].removeWhenReached then
-		-- current waypoint is temporary, not part of the course, should be removed here
-		table.remove( vehicle.Waypoints, waypointIndex )
-		vehicle.drawDebugLine = nil
-		courseplay:debug(string.format("%s:(Align) removing alignment waypoint at index %d", nameNum(vehicle), waypointIndex ), 12 )
-		return true
-	end
-	return false
-end
-
 -- do not delete this line
 -- vim: set noexpandtab:
