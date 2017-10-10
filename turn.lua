@@ -1944,18 +1944,17 @@ end
 
 -- is the vehicle currently on an alignment course?
 function courseplay:onAlignmentCourse( vehicle )
-	print(vehicle.cp.alignment.savedWaypoints)
 	return vehicle.cp.alignment.savedWaypoints ~= nil
 end
 
 -- End the alignment course, restore the original course and continue on it.
 function courseplay:endAlignmentCourse( vehicle )
 	if courseplay:onAlignmentCourse( vehicle ) then
-		courseplay:debug(string.format("%s:(Align) Ending alignment course, countinue on original course at waypoint %d.", nameNum(vehicle)), vehicle.cp.waypointIndex, 14 )
 		vehicle.Waypoints = vehicle.cp.alignment.savedWaypoints
 		vehicle.cp.numWaypoints = vehicle.cp.alignment.savedNumWaypoints
 		vehicle.cp.waypointIndex = vehicle.cp.alignment.savedWaypointIndex	
 		vehicle.cp.previousWaypointIndex = vehicle.cp.alignment.savedpreviousWaypointIndex	
+		courseplay:debug(string.format("%s:(Align) Ending alignment course, countinue on original course at waypoint %d.", nameNum(vehicle), vehicle.cp.waypointIndex), 14 )
 		vehicle.cp.alignment.savedWaypoints = nil
 	else
 		courseplay:debug(string.format("%s:(Align) Ending alignment course but not on alignement course.", nameNum(vehicle)), 14 )

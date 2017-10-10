@@ -1078,6 +1078,7 @@ function courseplay:drive(self, dt)
 				-- we are at the last wp of a temporary alignment course,
 				-- restore original course and continue on that
 				courseplay:endAlignmentCourse( self )
+				courseplay:setWaypointIndex(self, 2);
 			else
 				if (self.cp.mode == 4 or self.cp.mode == 6) and not self.cp.hasUnloadingRefillingCourse then
 				else
